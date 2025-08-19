@@ -1,7 +1,4 @@
-
--- SafeScriptRunner (Server Script)
-
-
+-- SafeScriptRunner (Server Script) v2 — Fix: admin di Studio, auto-scan SafeScripts
 local RunSafeScript = Remotes:FindFirstChild("RunSafeScript") or Instance.new("RemoteEvent")
 RunSafeScript.Name = "RunSafeScript"
 RunSafeScript.Parent = Remotes
