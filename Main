@@ -1,1 +1,80 @@
 
+-- SafeScriptRunner (Server Script)
+
+
+local RunSafeScript = Remotes:FindFirstChild("RunSafeScript") or Instance.new("RemoteEvent")
+RunSafeScript.Name = "RunSafeScript"
+RunSafeScript.Parent = Remotes
+
+
+local GetSafeScripts = Remotes:FindFirstChild("GetSafeScripts") or Instance.new("RemoteFunction")
+GetSafeScripts.Name = "GetSafeScripts"
+GetSafeScripts.Parent = Remotes
+
+
+-- ==== Whitelist Script ====
+-- Kunci = id script (string) yang tampil di UI, Value = ModuleScript path
+local SafeScriptsFolder = ReplicatedStorage:WaitForChild("SafeScripts")
+local WHITELIST = {
+SpeedBoost = SafeScriptsFolder:WaitForChild("SpeedBoost"),
+GiveCoins = SafeScriptsFolder:WaitForChild("GiveCoins"),
+}
+
+
+-- Deskripsi untuk UI
+local META = {
+SpeedBoost = { name = "Speed Boost", desc = "Tambah kecepatan sementara" },
+GiveCoins = { name = "Give Coins", desc = "Tambah koin ke player" },
+}
+
+
+-- Utility: cek admin
+local function isAdmin(player)
+return ADMIN_USER_IDS[player.UserId] == true
+end
+
+
+-- RemoteFunction: kirim daftar script ke client (hanya admin yang dapat data)
+GetSafeScripts.OnServerInvoke = function(player)
+if not isAdmin(player) then return {} end
+local list = {}
+for key, meta in pairs(META) do
+table.insert(list, {
+id = key,
+name = meta.name,
+desc = meta.desc,
+})
+end
+-- sort by name
+table.sort(list, function(a,b) return a.name < b.name end)
+return list
+end
+
+
+-- RemoteEvent: jalankan script (server-side)
+RunSafeScript.OnServerEvent:Connect(function(player, scriptId, args)
+if not isAdmin(player) then return end
+local moduleScript = WHITELIST[scriptId]
+if not moduleScript then return end
+local ok, result, detail = pcall(function()
+local module = require(moduleScript)
+if typeof(module) == "table" and typeof(module.Run) == "function" then
+return module.Run(player, args or {})
+end
+return false, "Invalid module: no Run()"
+end)
+if not ok then
+player:Kick("SafeScript error: " .. tostring(result))
+return
+end
+-- Optional: feedback ke player melalui SetCore atau Leaderstats dsb.
+-- (Untuk contoh minimal, kita diamkan saja.)
+end)
+
+
+-- Info log (opsional)
+Players.PlayerAdded:Connect(function(p)
+if isAdmin(p) then
+print("[SafeScriptRunner] Admin joined:", p.Name)
+end
+end)
